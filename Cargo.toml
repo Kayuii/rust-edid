@@ -1,6 +1,6 @@
 [package]
 name = "edid"
-version = "0.3.0"
+version = "0.4.0-pre"
 description = "Parse EDID data structures"
 homepage = "https://github.com/emersion/rust-edid"
 repository = "https://github.com/emersion/rust-edid"
@@ -9,9 +9,7 @@ readme = "README.md"
 categories = ["parser-implementations"]
 license = "MIT"
 authors = ["emersion"]
+edition = "2018"
 
 [dependencies]
-
-[dependencies.nom]
-version = "3.2.0"
-features = ["verbose-errors"]
+nom = "7"
