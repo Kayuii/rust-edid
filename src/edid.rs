@@ -33,32 +33,14 @@ fn parse_vendor(v: u16) -> [char; 3] {
 }
 
 fn parse_header(input: &[u8]) -> IResult<&[u8], Header, VerboseError<&[u8]>> {
-    let mut remaining = input;
-
-    let _tag;
-    (remaining, _tag) = tag(&[0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00][..])(remaining)?;
-
-    let vendor;
-    (remaining, vendor) = map(be_u16, parse_vendor)(remaining)?;
-
-    let product;
-    (remaining, product) = le_u16(remaining)?;
-
-    let serial;
-    (remaining, serial) = le_u32(remaining)?;
-
-    let week;
-    (remaining, week) = le_u8(remaining)?;
-
-    let year;
-    (remaining, year) = le_u8(remaining)?;
-
-    let version;
-    (remaining, version) = le_u8(remaining)?;
-
-    let revision;
-    (remaining, revision) = le_u8(remaining)?;
-
+    let (remaining, _) = tag(&[0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00][..])(input)?;
+    let (remaining, vendor) = map(be_u16, parse_vendor)(remaining)?;
+    let (remaining, product) = le_u16(remaining)?;
+    let (remaining, serial) = le_u32(remaining)?;
+    let (remaining, week) = le_u8(remaining)?;
+    let (remaining, year) = le_u8(remaining)?;
+    let (remaining, version) = le_u8(remaining)?;
+    let (remaining, revision) = le_u8(remaining)?;
     Ok((
         remaining,
         Header {
@@ -83,23 +65,11 @@ pub struct Display {
 }
 
 fn parse_display(input: &[u8]) -> IResult<&[u8], Display, VerboseError<&[u8]>> {
-    let mut remaining = input;
-
-    let video_input;
-    (remaining, video_input) = le_u8(remaining)?;
-
-    let width;
-    (remaining, width) = le_u8(remaining)?;
-
-    let height;
-    (remaining, height) = le_u8(remaining)?;
-
-    let gamma;
-    (remaining, gamma) = le_u8(remaining)?;
-
-    let features;
-    (remaining, features) = le_u8(remaining)?;
-
+    let (remaining, video_input) = le_u8(input)?;
+    let (remaining, width) = le_u8(remaining)?;
+    let (remaining, height) = le_u8(remaining)?;
+    let (remaining, gamma) = le_u8(remaining)?;
+    let (remaining, features) = le_u8(remaining)?;
     Ok((
         remaining,
         Display {
@@ -111,14 +81,6 @@ fn parse_display(input: &[u8]) -> IResult<&[u8], Display, VerboseError<&[u8]>> {
         },
     ))
 }
-// named!(parse_display<&[u8], Display, VerboseError<&[u8]>>, do_parse!(
-//     video_input: le_u8
-//     >> width: le_u8
-//     >> height: le_u8
-//     >> gamma: le_u8
-//     >> features: le_u8
-//     >> (Display{video_input, width, height, gamma, features})
-// ));
 
 fn parse_chromaticity(input: &[u8]) -> IResult<&[u8], (), VerboseError<&[u8]>> {
     map(take(10u8), |_bytes| ())(input)
@@ -167,118 +129,48 @@ pub struct DetailedTiming {
 }
 
 fn parse_detailed_timing(input: &[u8]) -> IResult<&[u8], DetailedTiming, VerboseError<&[u8]>> {
-    let mut remaining = input;
-
-    let pixel_clock = {
-        let pixel_clock_10khz;
-        (remaining, pixel_clock_10khz) = le_u16(remaining)?;
-        u32::from(pixel_clock_10khz) * 10
-    };
-
-    let horizontal_active_pixels;
-    let horizontal_blanking_pixels;
-    {
-        let horizontal_active_lo;
-        (remaining, horizontal_active_lo) = le_u8(remaining)?;
-
-        let horizontal_blanking_lo;
-        (remaining, horizontal_blanking_lo) = le_u8(remaining)?;
-
-        let horizontal_px_hi;
-        (remaining, horizontal_px_hi) = le_u8(remaining)?;
-
-        horizontal_active_pixels =
-            (horizontal_active_lo as u16) | (((horizontal_px_hi >> 4) as u16) << 8);
-
-        horizontal_blanking_pixels =
-            (horizontal_blanking_lo as u16) | (((horizontal_px_hi & 0xf) as u16) << 8);
-    }
-
-    let vertical_active_lines;
-    let vertical_blanking_lines;
-    {
-        let vertical_active_lo;
-        (remaining, vertical_active_lo) = le_u8(remaining)?;
-
-        let vertical_blanking_lo;
-        (remaining, vertical_blanking_lo) = le_u8(remaining)?;
-
-        let vertical_px_hi;
-        (remaining, vertical_px_hi) = le_u8(remaining)?;
-
-        vertical_active_lines = (vertical_active_lo as u16) | (((vertical_px_hi >> 4) as u16) << 8);
-
-        vertical_blanking_lines =
-            (vertical_blanking_lo as u16) | (((vertical_px_hi & 0xf) as u16) << 8);
-    }
-
-    let horizontal_front_porch;
-    let horizontal_sync_width;
-    let vertical_front_porch;
-    let vertical_sync_width;
-    {
-        let horizontal_front_porch_lo;
-        (remaining, horizontal_front_porch_lo) = le_u8(remaining)?;
-
-        let horizontal_sync_width_lo;
-        (remaining, horizontal_sync_width_lo) = le_u8(remaining)?;
-
-        let vertical_lo;
-        (remaining, vertical_lo) = le_u8(remaining)?;
-
-        let porch_sync_hi;
-        (remaining, porch_sync_hi) = le_u8(remaining)?;
-
-        horizontal_front_porch =
-            (horizontal_front_porch_lo as u16) | (((porch_sync_hi >> 6) as u16) << 8);
-        horizontal_sync_width =
-            (horizontal_sync_width_lo as u16) | ((((porch_sync_hi >> 4) & 0x3) as u16) << 8);
-        vertical_front_porch =
-            ((vertical_lo >> 4) as u16) | ((((porch_sync_hi >> 2) & 0x3) as u16) << 8);
-        vertical_sync_width = ((vertical_lo & 0xf) as u16) | (((porch_sync_hi & 0x3) as u16) << 8);
-    }
-
-    let horizontal_size;
-    let vertical_size;
-    {
-        let horizontal_size_lo;
-        (remaining, horizontal_size_lo) = le_u8(remaining)?;
-
-        let vertical_size_lo;
-        (remaining, vertical_size_lo) = le_u8(remaining)?;
-
-        let size_hi;
-        (remaining, size_hi) = le_u8(remaining)?;
-
-        horizontal_size = (horizontal_size_lo as u16) | (((size_hi >> 4) as u16) << 8);
-        vertical_size = (vertical_size_lo as u16) | (((size_hi & 0xf) as u16) << 8);
-    }
-
-    let horizontal_border_pixels;
-    (remaining, horizontal_border_pixels) = le_u8(remaining)?;
-
-    let vertical_border_pixels;
-    (remaining, vertical_border_pixels) = le_u8(remaining)?;
-
-    let features;
-    (remaining, features) = le_u8(remaining)?;
+    let (remaining, pixel_clock_10khz) = le_u16(input)?;
+    let (remaining, horizontal_active_lo) = le_u8(remaining)?;
+    let (remaining, horizontal_blanking_lo) = le_u8(remaining)?;
+    let (remaining, horizontal_px_hi) = le_u8(remaining)?;
+    let (remaining, vertical_active_lo) = le_u8(remaining)?;
+    let (remaining, vertical_blanking_lo) = le_u8(remaining)?;
+    let (remaining, vertical_px_hi) = le_u8(remaining)?;
+    let (remaining, horizontal_front_porch_lo) = le_u8(remaining)?;
+    let (remaining, horizontal_sync_width_lo) = le_u8(remaining)?;
+    let (remaining, vertical_lo) = le_u8(remaining)?;
+    let (remaining, porch_sync_hi) = le_u8(remaining)?;
+    let (remaining, horizontal_size_lo) = le_u8(remaining)?;
+    let (remaining, vertical_size_lo) = le_u8(remaining)?;
+    let (remaining, size_hi) = le_u8(remaining)?;
+    let (remaining, horizontal_border) = le_u8(remaining)?;
+    let (remaining, vertical_border) = le_u8(remaining)?;
+    let (remaining, features) = le_u8(remaining)?;
 
     Ok((
         remaining,
         DetailedTiming {
-            pixel_clock,
-            horizontal_active_pixels,
-            horizontal_blanking_pixels,
-            vertical_active_lines,
-            vertical_blanking_lines,
-            horizontal_front_porch,
-            horizontal_sync_width,
-            vertical_front_porch,
-            vertical_sync_width,
-            horizontal_size,
-            vertical_size,
-            horizontal_border_pixels,
-            vertical_border_pixels,
+            pixel_clock: pixel_clock_10khz as u32 * 10,
+            horizontal_active_pixels: (horizontal_active_lo as u16)
+                | (((horizontal_px_hi >> 4) as u16) << 8),
+            horizontal_blanking_pixels: (horizontal_blanking_lo as u16)
+                | (((horizontal_px_hi & 0xf) as u16) << 8),
+            vertical_active_lines: (vertical_active_lo as u16)
+                | (((vertical_px_hi >> 4) as u16) << 8),
+            vertical_blanking_lines: (vertical_blanking_lo as u16)
+                | (((vertical_px_hi & 0xf) as u16) << 8),
+            horizontal_front_porch: (horizontal_front_porch_lo as u16)
+                | (((porch_sync_hi >> 6) as u16) << 8),
+            horizontal_sync_width: (horizontal_sync_width_lo as u16)
+                | ((((porch_sync_hi >> 4) & 0x3) as u16) << 8),
+            vertical_front_porch: ((vertical_lo >> 4) as u16)
+                | ((((porch_sync_hi >> 2) & 0x3) as u16) << 8),
+            vertical_sync_width: ((vertical_lo & 0xf) as u16)
+                | (((porch_sync_hi & 0x3) as u16) << 8),
+            horizontal_size: (horizontal_size_lo as u16) | (((size_hi >> 4) as u16) << 8),
+            vertical_size: (vertical_size_lo as u16) | (((size_hi & 0xf) as u16) << 8),
+            horizontal_border_pixels: horizontal_border,
+            vertical_border_pixels: vertical_border,
             features,
         },
     ))
@@ -289,10 +181,10 @@ pub enum Descriptor {
     DetailedTiming(DetailedTiming),
     SerialNumber(String),
     UnspecifiedText(String),
-    RangeLimits, // TODO
+    RangeLimits, 
     ProductName(String),
-    WhitePoint,     // TODO
-    StandardTiming, // TODO
+    WhitePoint,     
+    StandardTiming, 
     ColorManagement,
     TimingCodes,
     EstablishedTimings,
@@ -301,41 +193,25 @@ pub enum Descriptor {
 }
 
 fn parse_descriptor(input: &[u8]) -> IResult<&[u8], Descriptor, VerboseError<&[u8]>> {
-    let mut remaining = input;
-
-    let peeked;
-    (remaining, peeked) = peek(le_u16)(remaining)?;
-
+    let (remaining, peeked) = peek(le_u16)(input)?;
     match peeked {
         0 => {
-            let _discarded; // TODO: What is this? Is this useful?
-            (remaining, _discarded) = take(3u8)(remaining)?;
-
-            let discriminant; // TODO: Describe this better! Why is this a discriminant?
-            (remaining, discriminant) = le_u8(remaining)?;
-
-            let _discarded; // TODO: What is this? Is this useful?
-            (remaining, _discarded) = le_u8(remaining)?;
+            let (remaining, _) = take(3u8)(remaining)?;
+            let (remaining, discriminant) = le_u8(remaining)?;
+            let (remaining, _) = le_u8(remaining)?;
 
             match discriminant {
                 0xFF => map(parse_descriptor_text, |s| Descriptor::SerialNumber(s))(remaining),
                 0xFE => map(parse_descriptor_text, |s| Descriptor::UnspecifiedText(s))(remaining),
-                // TODO: Parse this maybe?
                 0xFD => map(take(13u8), |_discarded: &[u8]| Descriptor::RangeLimits)(remaining),
                 0xFC => map(parse_descriptor_text, |s| Descriptor::ProductName(s))(remaining),
-                // TODO: Parse this maybe?
                 0xFB => map(take(13u8), |_discarded: &[u8]| Descriptor::WhitePoint)(remaining),
-                // TODO: Parse this maybe?
                 0xFA => map(take(13u8), |_discarded: &[u8]| Descriptor::StandardTiming)(remaining),
-                // TODO: Parse this maybe?
                 0xF9 => map(take(13u8), |_discarded: &[u8]| Descriptor::ColorManagement)(remaining),
-                // TODO: Parse this maybe?
                 0xF8 => map(take(13u8), |_discarded: &[u8]| Descriptor::TimingCodes)(remaining),
-                // TODO: Parse this maybe?
                 0xF7 => map(take(13u8), |_discarded: &[u8]| {
                     Descriptor::EstablishedTimings
                 })(remaining),
-                // TODO: Parse this maybe?
                 0x10 => map(take(13u8), |_discarded: &[u8]| Descriptor::Dummy)(remaining),
                 _ => map(take(13u8), |data: &[u8]| {
                     Descriptor::Unknown(data.try_into().unwrap())
@@ -343,8 +219,7 @@ fn parse_descriptor(input: &[u8]) -> IResult<&[u8], Descriptor, VerboseError<&[u
             }
         }
         _ => {
-            let detailed_timing;
-            (remaining, detailed_timing) = parse_detailed_timing(remaining)?;
+            let (remaining, detailed_timing) = parse_detailed_timing(remaining)?;
             Ok((remaining, Descriptor::DetailedTiming(detailed_timing)))
         }
     }
@@ -361,32 +236,14 @@ pub struct EDID {
 }
 
 fn parse_edid(input: &[u8]) -> IResult<&[u8], EDID, VerboseError<&[u8]>> {
-    let mut remaining = input;
-
-    let header;
-    (remaining, header) = parse_header(remaining)?;
-
-    let display;
-    (remaining, display) = parse_display(remaining)?;
-
-    let chromaticity;
-    (remaining, chromaticity) = parse_chromaticity(remaining)?;
-
-    let established_timing;
-    (remaining, established_timing) = parse_established_timing(remaining)?;
-
-    let standard_timing;
-    (remaining, standard_timing) = parse_standard_timing(remaining)?;
-
-    let descriptors;
-    (remaining, descriptors) = count(parse_descriptor, 4)(remaining)?;
-
-    let _number_of_extensions;
-    (remaining, _number_of_extensions) = take(1u8)(remaining)?;
-
-    let _checksum;
-    (remaining, _checksum) = take(1u8)(remaining)?;
-
+    let (remaining, header) = parse_header(input)?;
+    let (remaining, display) = parse_display(remaining)?;
+    let (remaining, chromaticity) = parse_chromaticity(remaining)?;
+    let (remaining, established_timing) = parse_established_timing(remaining)?;
+    let (remaining, standard_timing) = parse_standard_timing(remaining)?;
+    let (remaining, descriptors) = count(parse_descriptor, 4)(remaining)?;
+    let (remaining, _number_of_extensions) = take(1u8)(remaining)?;
+    let (remaining, _checksum) = take(1u8)(remaining)?;
     Ok((
         remaining,
         EDID {
