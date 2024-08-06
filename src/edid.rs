@@ -9,7 +9,7 @@ use nom::{
 };
 use std::convert::TryInto;
 
-use crate::cp437;
+use crate::{cp437, extension::{parse_extension, CtaExtensions}};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Header {
@@ -104,7 +104,7 @@ fn parse_descriptor_text(input: &[u8]) -> IResult<&[u8], String, VerboseError<&[
     })(input)
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Default)]
 pub struct DetailedTiming {
     /// Pixel clock in kHz.
     pub pixel_clock: u32,
@@ -127,7 +127,7 @@ pub struct DetailedTiming {
     pub features: u8, /* TODO add enums etc. */
 }
 
-fn parse_detailed_timing(input: &[u8]) -> IResult<&[u8], DetailedTiming, VerboseError<&[u8]>> {
+pub(crate) fn parse_detailed_timing(input: &[u8]) -> IResult<&[u8], DetailedTiming, VerboseError<&[u8]>> {
     map(
         tuple((
             le_u16, // pixel_clock_10khz
@@ -246,42 +246,65 @@ fn parse_descriptor(input: &[u8]) -> IResult<&[u8], Descriptor, VerboseError<&[u
 pub struct EDID {
     pub header: Header,
     pub display: Display,
-    pub chromaticity: (),       // TODO
-    pub established_timing: (), // TODO
-    pub standard_timing: (),    // TODO
+    pub chromaticity: (),       
+    pub established_timing: (), 
+    pub standard_timing: (),    
     pub descriptors: Vec<Descriptor>,
+    pub extensions: Option<CtaExtensions>,
+
 }
 
 fn parse_edid(input: &[u8]) -> IResult<&[u8], EDID, VerboseError<&[u8]>> {
-    map(
-        tuple((
-            parse_header,
-            parse_display,
-            parse_chromaticity,
-            parse_established_timing,
-            parse_standard_timing,
-            map(count(parse_descriptor, 4), Vec::from),
-            take(1u8), // number_of_extensions
-            take(1u8), // checksum
-        )),
-        |(
+    let (input, (
+        header,
+        display,
+        chromaticity,
+        established_timing,
+        standard_timing,
+        descriptors,
+        number_of_extensions,
+        _checksum
+    )) = tuple((
+        parse_header,
+        parse_display,
+        parse_chromaticity,
+        parse_established_timing,
+        parse_standard_timing,
+        map(count(parse_descriptor, 4), Vec::from),
+        le_u8,
+        le_u8,
+    ))(input)?;
+
+    if number_of_extensions == 0 {
+        return Ok((input, EDID {
             header,
             display,
             chromaticity,
             established_timing,
             standard_timing,
             descriptors,
-            _,
-            _,
-        )| EDID {
+            extensions: None,
+        }));
+    }
+
+    // let (input, extensions) = map(
+    //     count(move |input| parse_extension(input), number_of_extensions as usize),
+    //     Vec::from,
+    // )(input)?;
+    let (input, extensions) = parse_extension(input)?;
+
+    Ok((
+        input,
+        EDID {
             header,
             display,
             chromaticity,
             established_timing,
             standard_timing,
             descriptors,
+            extensions: Some(extensions),
         },
-    )(input)
+    ))
 }
 
 pub fn parse(data: &[u8]) -> nom::IResult<&[u8], EDID, VerboseError<&[u8]>> {

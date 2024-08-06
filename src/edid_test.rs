@@ -16,7 +16,7 @@ mod tests {
 
     #[test]
     fn test_card0_vga_1() {
-        let d = include_bytes!("../testdata/card0-VGA-1");
+        let d = include_bytes!("../testdata/card0-VGA-1.bin");
 
         let expected = EDID {
             header: Header {
@@ -59,6 +59,7 @@ mod tests {
                 Descriptor::ProductName("SyncMaster".to_string()),
                 Descriptor::SerialNumber("HS3P701105".to_string()),
             ],
+            extensions: None,
         };
 
         test(d, &expected);
@@ -66,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_card0_edp_1() {
-        let d = include_bytes!("../testdata/card0-eDP-1");
+        let d = include_bytes!("../testdata/card0-eDP-1.bin");
 
         let expected = EDID {
             header: Header {
@@ -109,6 +110,7 @@ mod tests {
                 Descriptor::UnspecifiedText("DJCP6ÇLQ133M1".to_string()),
                 Descriptor::Unknown([2, 65, 3, 40, 0, 18, 0, 0, 11, 1, 10, 32, 32]),
             ],
+            extensions: None,
         };
 
         test(d, &expected);

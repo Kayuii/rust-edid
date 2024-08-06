@@ -4,7 +4,7 @@ use nom::Err::{Incomplete, Error, Failure};
 
 fn main() {
 
-    let d = include_bytes!("../testdata/card0-LVDS-1");
+    let d = include_bytes!("../testdata/card0-LVDS-1.bin");
 
     match parse(d) {
         Ok((_, parsed)) => {
