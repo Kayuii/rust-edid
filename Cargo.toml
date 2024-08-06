@@ -1,5 +1,5 @@
 [package]
-name = "edid"
+name = "edidr"
 version = "0.4.0"
 description = "Parse EDID data structures"
 homepage = "https://github.com/emersion/rust-edid"

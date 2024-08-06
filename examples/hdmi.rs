@@ -1,4 +1,4 @@
-use edid::parse;
+use edidr::parse;
 
 use nom::Err::{Incomplete, Error, Failure};
 
