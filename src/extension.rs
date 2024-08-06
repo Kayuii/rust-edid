@@ -1,9 +1,9 @@
 use nom::{
-    bytes::streaming::{tag, take},
+    bytes::complete::{tag, take},
     combinator::{map, not, peek},
     error::{context, VerboseError},
     multi::many0,
-    number::streaming::le_u8,
+    number::complete::le_u8,
     sequence::tuple,
     IResult,
 };

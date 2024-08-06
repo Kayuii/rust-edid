@@ -11,7 +11,7 @@ fn main() {
             println!("parsed: {:#?}", parsed);
         },
         Err(Incomplete(_needed)) => { 
-            panic!("Incomplete");
+            panic!("Incomplete: {:#?}", _needed);
          },
         Err(Error(e)) | Err(Failure(e)) => { 
             panic!("{}", format!("{:?}", e));
@@ -25,7 +25,7 @@ fn main() {
             println!("parsed: {:#?}", parsed);
         },
         Err(Incomplete(_needed)) => { 
-            panic!("Incomplete");
+            panic!("Incomplete: {:#?}", _needed);
          },
         Err(Error(e)) | Err(Failure(e)) => { 
             panic!("{}", format!("{:?}", e));
